@@ -1,6 +1,8 @@
 
 import * as _ from "lodash";
 
+export const TRADE = "market-trade";
+
 export interface Order {
     price: number;
     volume: number;
@@ -31,6 +33,16 @@ export interface MarketTrades {
 
 export interface MarketState {
     markets: { [id: string]: { [resourceId: string]: Market } };
+}
+
+export function avgPrice(resourceId: string, marketId: string, state: MarketState) {
+
+}
+
+export function trade() {
+    return {
+        type: TRADE
+    }
 }
 
 export function createMarket(lastPrice = 1) {

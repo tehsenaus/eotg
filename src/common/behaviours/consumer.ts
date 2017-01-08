@@ -36,7 +36,20 @@ export function createConsumer(
 	}
 }
 
-//export function setConsumerResources(consumerId: string, consumerResources: ConsumerResources)
+export function setConsumerResources(consumerId: string, consumerResources: ConsumerResources, state: ConsumerState) {
+	return createConsumer(
+		consumerId,
+		{
+			...state.consumers[consumerId],
+			consumerResources: consumerResources
+		},
+		state
+	)
+}
+
+export function consumerReducer(state: ConsumerState, action: any) {
+
+}
 
 export function desiredResources(consumerId: string, state: ConsumerState) {
 	const consumer = state.consumers[consumerId];
