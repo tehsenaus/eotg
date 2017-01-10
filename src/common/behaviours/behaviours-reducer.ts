@@ -10,16 +10,16 @@ import { marketReducer } from "./market";
 const reducers = [
 	timeReducer,
 
-	stockpileReducer,
+	//stockpileReducer,
 
-	industryReducer,
+	//industryReducer,
 
-	consumerReducer,
-	traderReducer,
-	marketReducer
+	//consumerReducer,
+	//traderReducer,
+	//marketReducer
 ]
 
-export default function behavioursReducer(initialState, action) {
+export default function behavioursReducer(initialState = {}, action) {
 	// Yo dawg, heard you like reducers...
 	return reducers.reduce(
 		(state, reducer) => reducer(state, action),

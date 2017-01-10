@@ -2,6 +2,7 @@
 export const TICK = "tick";
 
 export interface TickAction {
+	type: string;
 	deltaTime: number;
 }
 
@@ -16,6 +17,7 @@ export function time(state: TimeState) {
 // The tick action indicates forward progress in simulated game time.
 export function tick(deltaTime: number): TickAction {
 	return {
+		type: TICK,
 		deltaTime: deltaTime
 	}
 }
