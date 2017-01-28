@@ -2,9 +2,9 @@
 import { timeReducer } from "./time";
 import { stockpileReducer } from "./stockpile";
 import { consumerReducer } from "./consumer";
-import { traderReducer } from "./trader";
+//import { traderReducer } from "./trader";
 import { industryReducer } from "./industry";
-import { marketReducer } from "./market";
+//import { marketReducer } from "./market";
 
 // Order is important here, as some actions are dependent on others
 const reducers = [
@@ -22,7 +22,7 @@ const reducers = [
 export default function behavioursReducer(initialState = {}, action) {
 	// Yo dawg, heard you like reducers...
 	return reducers.reduce(
-		(state, reducer) => reducer(state, action),
+		(state, reducer) => reducer(state as any, action),
 		initialState
 	);
 }

@@ -3,18 +3,39 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-      "build": "node ./node_modules/typescript/bin/tsc",
-      "test": "node ./node_modules/mocha/bin/mocha --recursive",
-      "watch": "npm run build -- --watch"
+    "build:ts": "tsc",
+    "watch:ts": "npm run build:ts -- --watch",
+    "build:dev": "npm run build:ts",
+    "watch": "npm run watch:ts",
+    "test": "mocha --recursive",
+    "browse": "webpack-dev-server --hot",
+    "start": "npm-run-all --parallel watch browse",
+    "prepublish": "typings install && npm run build:dev"
   },
   "author": "Dynamo Studios",
   "license": "UNLICENSED",
   "dependencies": {
-    "lodash": "^4.17.4"
+    "lodash": "^4.17.4",
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "react-mdl": "^1.9.0",
+    "redux": "^3.6.0"
   },
   "devDependencies": {
+    "babel-loader": "^6.2.10",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-react": "^6.16.0",
+    "browser-sync": "^2.18.6",
+    "css-loader": "^0.26.1",
     "mocha": "^3.2.0",
+    "npm-run-all": "^4.0.1",
+    "react-hot-loader": "^1.3.1",
     "should": "^11.1.2",
-    "typescript": "^2.1.4"
+    "style-loader": "^0.13.1",
+    "ts-loader": "^2.0.0",
+    "typescript": "^2.1.4",
+    "typings": "^2.1.0",
+    "webpack": "^1.14.0",
+    "webpack-dev-server": "^1.16.2"
   }
 }

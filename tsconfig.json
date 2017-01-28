@@ -4,7 +4,7 @@
         "module": "CommonJS",
         "moduleResolution": "Node",
         "isolatedModules": false,
-        "jsx": "react",
+        "jsx": "React",
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "declaration": false,
@@ -19,7 +19,8 @@
         "rootDir": "src/"
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "typings/**/*.d.ts"
     ],
     "exclude": [
         "node_modules",
