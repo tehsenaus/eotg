@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { Layout, Header, Drawer, HeaderRow, Textfield, Navigation, Content } from 'react-mdl';
 
-import Counter from "./Counter";
 import EconomyPage from "./planet/EconomyPage";
 
 export default class Index extends React.Component<any, {}> {
