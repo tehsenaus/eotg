@@ -37,6 +37,7 @@ export default class Index extends React.Component<any, {}> {
                 <HeaderRow>
                     <Navigation>
                         <a href="">Overview</a>
+						<a href="">Ecology</a>
                         <a href="">Economy</a>
                         <a href="">Government</a>
                         <a href="">Military</a>

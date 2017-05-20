@@ -39,7 +39,7 @@ export default function main(reducer = gameLogicReducer, initialState = defaultI
 function * getTime(gameLoopGenerator: Iterator<TimeState>) {
 	while ( true ) {
 		const res = gameLoopGenerator.next();
-		if  ( res.done ) return;
+		if ( res.done ) return;
 		yield time(res.value);
 	}
 }
