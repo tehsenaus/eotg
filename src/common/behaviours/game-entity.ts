@@ -1,7 +1,7 @@
 import { mapValues } from 'lodash';
 
 export type GameEntityReducer<EntityState, EntityAction> =
-	(entityState: EntityState, action: EntityAction, globalState) => EntityState;
+	(entityState: EntityState, action: EntityAction) => EntityState;
 
 export function gameEntityGetter<EntityState>(name: string) {
 	return (state, id: string) => {
@@ -17,7 +17,7 @@ export function gameEntityReducer<EntityState, EntityAction>(name: string) {
 	return (fn: GameEntityReducer<EntityState, EntityAction>) => (state, action) => {
 		var mutatedEntityCount = 0;
 		const nextEntities = mapValues(state[name], entityState => {
-			const nextEntityState = fn(entityState, action, state);
+			const nextEntityState = fn(entityState, action);
 
 			if ( nextEntityState !== entityState ) {
 				mutatedEntityCount++;

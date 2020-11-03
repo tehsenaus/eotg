@@ -1,29 +1,47 @@
 
 import * as _ from "lodash";
 
+export const OFFER = "market-offer";
+export const BID = "market-bid";
 export const TRADE = "market-trade";
 
+export enum MarketLevel {
+    LOCAL = 0,
+    REGIONAL = 1,
+    NATIONAL = 2,
+    COMMON = 3,
+    GLOBAL = 4,
+}
+
 export interface Order {
+    type: typeof OFFER | typeof BID;
     price: number;
     volume: number;
-}
 
-export interface OrderBook {
-    bids: Order [];
-    asks: Order [];
-}
+    // In the case of an offer (to sell), who can see this?
+    // In the case of a bid (to buy), how far up the market hierarchy can we look for offers?
+    scope: MarketLevel;
 
-export interface Market {
-    orderBook: OrderBook;
-    volume: number;
-    avgPrice: number;
+    // TODO: factor in transport costs
+    locationId: string;
 }
 
 export interface Trade {
+    type: typeof TRADE;
     price: number;
     volume: number;
     buyOrder: Order;
     sellOrder: Order;
+}
+
+export interface Market {
+    level: MarketLevel;
+    locationId: string;
+
+    offers: Order []; // sorted by price, ascending
+    
+    volume: number;
+    avgPrice: number;
 }
 
 export interface MarketTrades {
@@ -33,10 +51,6 @@ export interface MarketTrades {
 
 export interface MarketState {
     markets: { [id: string]: { [resourceId: string]: Market } };
-}
-
-export function avgPrice(resourceId: string, marketId: string, state: MarketState) {
-
 }
 
 export function trade() {
@@ -55,59 +69,4 @@ export function createMarket(lastPrice = 1) {
     }
 }
 
-export function executeMarketOrders(market: Market): MarketTrades {
-    const remainingBids = _.sortBy(market.orderBook.bids, o => o.price);
-    const remainingAsks = _.sortBy(market.orderBook.asks, o => o.price);
-    const trades: Trade [] = [];
-    var volume = 0;
-    var priceVolume = 0;
 
-    for ( var i = 0, j = 0; i < remainingBids.length && j < remainingAsks.length; i++, j++ ) {
-        let topBid = remainingBids[remainingBids.length - (i+1)],
-            bottomAsk = remainingAsks[j];
-
-        if ( topBid.price >= bottomAsk.price ) {
-            let trade: Trade = {
-
-                // Use the mid price, as we have no concept of 'aggressor'
-                price: (topBid.price + bottomAsk.price) / 2,
-
-                volume: Math.min(topBid.volume, bottomAsk.volume),
-
-                buyOrder: topBid,
-                sellOrder: bottomAsk
-            }
-
-            if ( topBid.volume > trade.volume ) {
-                // This is a local copy of the array, we can safely mutate
-                remainingBids[remainingBids.length - (i+1)] = {
-                    ...topBid,
-                    volume: topBid.volume - trade.volume
-                }
-                i--;
-            } else if ( bottomAsk.volume > trade.volume ) {
-                remainingAsks[j] = {
-                    ...bottomAsk,
-                    volume: bottomAsk.volume - trade.volume
-                }
-                j--;
-            }
-
-            trades.push(trade);
-            volume += trade.volume;
-            priceVolume += trade.volume * trade.price;
-        }
-    }
-
-    return {
-        market: {
-            orderBook: {
-                bids: remainingBids,
-                asks: remainingAsks
-            },
-            volume: volume,
-            avgPrice: volume > 0 ? priceVolume / volume : market.avgPrice
-        },
-        trades: trades
-    }
-}
