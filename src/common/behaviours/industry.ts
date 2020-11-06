@@ -1,5 +1,5 @@
 
-import * as _ from "lodash";
+import _ from "lodash";
 import { gameEntityReducer } from "./game-entity";
 import { StockpileState, qty } from "./stockpile";
 import { TRADE } from "./market";
@@ -50,35 +50,35 @@ export function industryReducer(state: IndustryState, action: any): IndustryStat
 	return state;
 }
 
-export const applyTrade = createIndustryReducer((industry: Industry, action, state) => {
+export const applyTrade = createIndustryReducer((industry: Industry, action) => {
 	// Estimate profitability of running the industry
-	const profitMargin = estimateProfitMargin(industry.process, industry.traderId, state);
+	// const profitMargin = estimateProfitMargin(industry.process, industry.traderId);
 
-	if ( profitMargin > 1 ) {
-		debug('%s: trade: requesting input resources', industry.id);
+	// if ( profitMargin > 1 ) {
+	// 	debug('%s: trade: requesting input resources', industry.id);
 
-		var inputStockWorkUnits = _.mapValues(
-			industry.process.input,
-			(n, resourceId) => qty(industry.stockpileId, resourceId, state) / n
-		);
+	// 	var inputStockWorkUnits = _.mapValues(
+	// 		industry.process.input,
+	// 		(n, resourceId) => qty(industry.stockpileId, resourceId, state) / n
+	// 	);
 
 
-	}
+	// }
 
 	return industry;
 });
 
-export const applyProduce = createIndustryReducer((industry: Industry, action, state) => {
+export const applyProduce = createIndustryReducer((industry: Industry, action) => {
 	// Estimate profitability of running the industry
-	const profitMargin = estimateProfitMargin(industry.process, industry.traderId, state);
+	// const profitMargin = estimateProfitMargin(industry.process, industry.traderId, state);
 
-	if ( profitMargin > 1 ) {
-		debug('%s: produce: producing', industry.id);
+	// if ( profitMargin > 1 ) {
+	// 	debug('%s: produce: producing', industry.id);
 
-		var inputStockWorkUnits = getInputStockWorkUnits(industry, state);
+	// 	var inputStockWorkUnits = getInputStockWorkUnits(industry, state);
 
 
-	}
+	// }
 
 	return industry;
 });

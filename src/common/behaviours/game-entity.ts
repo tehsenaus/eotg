@@ -1,5 +1,7 @@
 import { mapValues } from 'lodash';
 
+export type EntityDict<T> = { [id: string]: T };
+
 export type GameEntityReducer<EntityState, EntityAction> =
 	(entityState: EntityState, action: EntityAction) => EntityState;
 

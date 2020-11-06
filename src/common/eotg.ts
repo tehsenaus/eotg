@@ -1,30 +1,64 @@
 
 import { run } from "./engine/game-loop";
 import { fixedTimeStepScheduler } from "./engine/scheduler";
-import behavioursReducer from "./behaviours/behaviours-reducer";
-import { time, tick, TimeState } from "./behaviours/time";
-import { trade } from "./behaviours/market";
+import { time, tick, TimeState, timeReducer } from "./behaviours/time";
+import { createMarket, MarketLevel } from "./behaviours/market";
+import { generateLocalityActions, Locality, localityReducer } from "./behaviours/locality";
 
-export const gameLogicReducer = behavioursReducer;
+export interface GameState {
+	gameTime: TimeState;
+	locality: Locality;
+}
 
-export const defaultInitialState = [
+const EMPTY_STATE: GameState = {
+	gameTime: {
+		time: 0,
+	},
+	locality: {
+		id: 'home',
+		populaces: {
+			'': {
+				id: '',
+				population: 10000,
+				health: 1,
+				wealth: 10000,
+				stockpile: {
+					
+				}
+			},
+		},
+		market: createMarket({
+			locationId: 'home',
+			level: MarketLevel.LOCAL,
+		}),
+	}
+};
 
-].reduce(gameLogicReducer, {});
+export const defaultInitialState: GameState = [
+
+].reduce(gameLogicReducer, EMPTY_STATE);
 
 
 // These are the actions which are dispatched on each iteration
 // of the game loop.
-function * gameCycle() {
-	yield trade();
+function * generateGameLoopActions(state: GameState) {
+	yield * generateLocalityActions(state.locality);
 
 	// Advance game time
 	yield tick(1);
 }
 
+export function gameLogicReducer(state: GameState = defaultInitialState, action): GameState {
+	return {
+		gameTime: timeReducer(state.gameTime, action),
+		locality: localityReducer(state.locality, action),
+	}
+}
+
 export default function main(reducer = gameLogicReducer, initialState = defaultInitialState) {
 	const gameLoopGenerator = run(
 		reducer,
-		Array.from(gameCycle()),
+		generateGameLoopActions,
 		initialState
 	);
 
@@ -36,10 +70,10 @@ export default function main(reducer = gameLogicReducer, initialState = defaultI
 	)
 }
 
-function * getTime(gameLoopGenerator: Iterator<TimeState>) {
+function * getTime(gameLoopGenerator: Iterator<GameState>) {
 	while ( true ) {
 		const res = gameLoopGenerator.next();
 		if ( res.done ) return;
-		yield time(res.value);
+		yield time(res.value.gameTime);
 	}
 }

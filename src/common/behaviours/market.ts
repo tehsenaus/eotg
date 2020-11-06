@@ -1,5 +1,7 @@
 
 import * as _ from "lodash";
+import { resourceTypes } from "../entities/resources";
+import { EntityDict } from "./game-entity";
 
 export const OFFER = "market-offer";
 export const BID = "market-bid";
@@ -34,23 +36,22 @@ export interface Trade {
     sellOrder: Order;
 }
 
-export interface Market {
-    level: MarketLevel;
-    locationId: string;
-
+export interface MarketResource {
     offers: Order []; // sorted by price, ascending
     
     volume: number;
     avgPrice: number;
 }
 
+export interface Market {
+    level: MarketLevel;
+    locationId: string;
+    resources: EntityDict<MarketResource>;
+}
+
 export interface MarketTrades {
     market: Market;
     trades: Trade [];
-}
-
-export interface MarketState {
-    markets: { [id: string]: { [resourceId: string]: Market } };
 }
 
 export function trade() {
@@ -59,14 +60,17 @@ export function trade() {
     }
 }
 
-export function createMarket(lastPrice = 1) {
+export function createMarket({ level, locationId }): Market {
     return {
-        orderBook: {
-            bids: [], asks: []
-        },
-        volume: 0,
-        avgPrice: lastPrice
-    }
+        level,
+        locationId,
+        resources: _.mapValues(
+            resourceTypes,
+            () => ({
+                offers: [],
+                volume: 0,
+                avgPrice: 1,
+            })
+        )
+    };
 }
-
-

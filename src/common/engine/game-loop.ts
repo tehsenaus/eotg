@@ -1,6 +1,7 @@
 
-export function * run(reducer, gameLoopActions, state) {
+export function * run(reducer, tickGameLoop, state) {
 	while(true) {
+		const gameLoopActions = tickGameLoop(state);
 		for ( let action of gameLoopActions ) {
 			console.log('game-loop: executing action:', action);
 			

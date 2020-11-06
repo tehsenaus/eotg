@@ -1,3 +1,4 @@
+import {sum} from "d3-array";
 
 export interface Job {
     id: string;
@@ -46,7 +47,7 @@ export function work(jobId: string): WorkAction {
         employeeCount: 0,
         output: 0,
         salaryPaid: 0,
-        byPopulace: {},
+        employeeActions: [],
     }
 }
 
@@ -55,24 +56,20 @@ export function mapWorkDayActionForJob(action: WorkAction, job: Job): WorkAction
 
     return {
         ...action,
-        employeeCount,
-        output,
-        salaryPaid: employeeCount * job.salaryPerDay,
+        employeeCount: sum(employeeActions, d => d.employeeCount),
+        output: sum(employeeActions, d => d.output),
+        salaryPaid: sum(employeeActions, d => d.salaryPaid),
     }
 }
 
-export function reduceWorkActionForJobEmployee(action: WorkAction, employee: Employee): WorkAction {
+export function workEmployee(employee: Employee, job: Job): EmployeeWorkAction {
     const output = employee.employeeCount * employee.productivity;
     return {
-        ...action,
-        employeeCount: action.employeeCount + employee.employeeCount,
-        output: action.output + output,
-        byPopulace: {
-            ...action.byPopulace,
-            [employee.populaceId]: {
-                employeeCount: employee.employeeCount,
-                output,
-            }
-        }
+        type: WORK_EMPLOYEE,
+        employeeId: employee.id,
+        populaceId: employee.populaceId,
+        employeeCount: employee.employeeCount,
+        output,
+        salaryPaid: employee.employeeCount * job.salaryPerDay,
     }
 }

@@ -19,33 +19,33 @@ export const initialState: ConsumerState = {
 	consumers: {}
 }
 
-export function createConsumer(
-	consumerId: string,
-	{ stockpileId, consumerResources },
-	state: ConsumerState
-): ConsumerState {
-	return {
-		...state,
-		consumers: {
-			...state.consumers,
-			[consumerId]: {
-				stockpileId,
-				consumerResources: consumerResources || {}
-			}
-		}
-	}
-}
+// export function createConsumer(
+// 	consumerId: string,
+// 	{ stockpileId, consumerResources },
+// 	state: ConsumerState
+// ): ConsumerState {
+// 	return {
+// 		...state,
+// 		consumers: {
+// 			...state.consumers,
+// 			[consumerId]: {
+// 				stockpileId,
+// 				consumerResources: consumerResources || {}
+// 			}
+// 		}
+// 	}
+// }
 
-export function setConsumerResources(consumerId: string, consumerResources: ConsumerResources, state: ConsumerState) {
-	return createConsumer(
-		consumerId,
-		{
-			...state.consumers[consumerId],
-			consumerResources: consumerResources
-		},
-		state
-	)
-}
+// export function setConsumerResources(consumerId: string, consumerResources: ConsumerResources, state: ConsumerState) {
+// 	return createConsumer(
+// 		consumerId,
+// 		{
+// 			...state.consumers[consumerId],
+// 			consumerResources: consumerResources
+// 		},
+// 		state
+// 	)
+// }
 
 export function consumerReducer(state: ConsumerState, action: any) {
 

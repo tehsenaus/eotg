@@ -30,7 +30,10 @@ export interface PopulaceMigration {
 
 export type PopulaceAction = PopulaceGrowth | PopulaceMigration | WorkAction | EmployeeWorkAction;
 
-function * generatePopulaceActions(populace: Populace) {
+export function * generatePopulaceActions(populace: Populace) {
+	const birthRate = 0.0001;
+	const deathRate = 0.00005;
+
 	const births = populace.population * birthRate;
 	const deaths = populace.population * deathRate;
 
@@ -40,10 +43,21 @@ function * generatePopulaceActions(populace: Populace) {
 		births,
 		deaths,
 	}
+
+	// TODO: migration
+
+	// TODO: work
 }
 
-function populaceReducer(action: PopulaceAction, state: Populace): Populace {
+export function populaceReducer(state: Populace, action: PopulaceAction): Populace {
 	switch (action.type) {
+		case GROW: {
+			return {
+				...state,
+				population: state.population + action.births - action.deaths,
+			}
+		}
+
 		case WORK: {
 			return action.employeeActions.reduce(populaceReducer, state);
 		}
