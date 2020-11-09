@@ -1,7 +1,6 @@
 
 import _ from "lodash";
 import { gameEntityReducer } from "./game-entity";
-import { StockpileState, qty } from "./stockpile";
 import { TRADE } from "./market";
 import { TraderState, marketPrice } from "./trader";
 
@@ -13,6 +12,7 @@ const createIndustryReducer = gameEntityReducer('industries');
 export const PRODUCE = "industry-produce";
 
 export type IndustrialProcessType = 'primary' | 'secondary';
+
 
 export interface IndustrialProcess {
 	id: string;
@@ -35,7 +35,7 @@ export interface PrimaryIndustry extends Industry {
 	naturalResourceId: string;
 }
 
-export interface IndustryState extends StockpileState, TraderState {
+export interface IndustryState extends TraderState {
 	industries: { [id: string]: Industry };
 }
 
@@ -98,7 +98,8 @@ export function estimateProfitMargin(process: IndustrialProcess, traderId: strin
 export function getInputStockWorkUnits(industry: Industry, state) {
 	return _.mapValues(
 		industry.process.input,
-		(n, resourceId) => qty(industry.stockpileId, resourceId, state) / n
+		// (n, resourceId) => qty(industry.stockpileId, resourceId, state) / n
+		() => 0
 	)
 }
 

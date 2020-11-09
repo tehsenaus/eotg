@@ -8,10 +8,17 @@ export const resourceTypes = {
 		halfLife: 30
 	},
 
+	housing: {
+
+	},
+
 	wood: {
 
 	}
 }
+
+export type ResourceId = keyof typeof resourceTypes;
+export type ResourceDict = { [P in ResourceId]?: number };
 
 export function halfLife(resourceId: string) {
 	return resourceTypes[resourceId].halfLife === void 0 ? Infinity

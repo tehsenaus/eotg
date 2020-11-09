@@ -2,7 +2,7 @@
 export const TICK = "tick";
 
 export interface TickAction {
-	type: string;
+	type: typeof TICK;
 	deltaTime: number;
 }
 

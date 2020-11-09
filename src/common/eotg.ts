@@ -3,7 +3,7 @@ import { run } from "./engine/game-loop";
 import { fixedTimeStepScheduler } from "./engine/scheduler";
 import { time, tick, TimeState, timeReducer } from "./behaviours/time";
 import { createMarket, MarketLevel } from "./behaviours/market";
-import { generateLocalityActions, Locality, localityReducer } from "./behaviours/locality";
+import { generateLocalityActions, generateLocalityTrades, Locality, localityReducer } from "./behaviours/locality";
 
 export interface GameState {
 	gameTime: TimeState;
@@ -19,11 +19,16 @@ const EMPTY_STATE: GameState = {
 		populaces: {
 			'': {
 				id: '',
+				populaceClassId: 'unskilled',
 				population: 10000,
 				health: 1,
-				wealth: 10000,
+				lifeNeedsSatisfactionPct: 1,
 				stockpile: {
-					
+					id: '',
+					wealth: 10000,
+					resources: {
+
+					}
 				}
 			},
 		},
@@ -43,6 +48,10 @@ export const defaultInitialState: GameState = [
 // of the game loop.
 function * generateGameLoopActions(state: GameState) {
 	yield * generateLocalityActions(state.locality);
+
+	const nextState = yield { type: '' };
+
+	yield * generateLocalityTrades(nextState.locality);
 
 	// Advance game time
 	yield tick(1);
