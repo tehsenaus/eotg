@@ -1,7 +1,8 @@
 import { mapValues } from "lodash";
-import { ResourceDict, ResourceId } from "../entities/resources";
+import { decayPct, ResourceDict, ResourceId } from "../entities/resources";
 import { EntityDict } from "./game-entity";
 import { TRADE, Trade } from "./market";
+import { TICK, TickAction } from "./time";
 
 export const CONSUME_RESOURCES = "CONSUME_RESOURCES";
 export const PRODUCE_RESOURCES = "PRODUCE_RESOURCES";
@@ -24,7 +25,7 @@ export interface ProduceResourcesAction {
 	resources: ResourceDict;
 }
 
-export type StockpileAction = ConsumeResourcesAction | Trade;
+export type StockpileAction = ConsumeResourcesAction | Trade | TickAction;
 
 export function getStockpileQty(stockpile: Stockpile, resourceId: ResourceId): number {
 	return stockpile.resources[resourceId] || 0;
@@ -60,6 +61,15 @@ export function stockpileReducer(state: Stockpile, action: StockpileAction) {
 					},
 				}
 			}
+			return state;
+		}
+
+		case TICK: {
+			const resourceDecay = mapValues(
+				state.resources,
+				(amount, resourceId) => amount * decayPct(resourceId, action.deltaTime)
+			);
+			return applyConsumeResources(state, resourceDecay);
 		}
 	}
 	return state;
@@ -73,7 +83,7 @@ export function applyConsumeResources(state: Stockpile, resources: EntityDict<nu
 		}
 	}
 	for (let resourceId in resources) {
-		state.resources[resourceId] = Math.max(0, state.resources[resourceId] - resources[resourceId]);
+		state.resources[resourceId] = Math.max(0, getStockpileQty(state, resourceId as ResourceId) - resources[resourceId]);
 	}
 	console.log(state);
 	return state;

@@ -5,7 +5,8 @@ import { PopulaceClassId, POPULACE_CLASSES } from "../entities/populace-classes"
 import { generateConsumerActions } from "./consumer";
 import { TICK, TickAction } from "./time";
 import { Modifier, applyModifiers } from "../engine/modifier";
-import { Trade, TRADE } from "./market";
+import { OFFER, Offer, offer, Order, Trade, TRADE } from "./market";
+import { act } from "react-dom/test-utils";
 
 export interface Populace {
 	id: string;
@@ -54,6 +55,17 @@ const HEALTH_MODIFIERS: PopulaceModifier [] = [
 	},
 ];
 
+const LABOUR_MODIFIERS: PopulaceModifier [] = [
+	{
+		id: 'base',
+		valueAccessor: populace => populace.population * 0.5,
+	},
+	{
+		id: 'health',
+		valueAccessor: populace => -0.5 * (1 - populace.health) * populace.population,
+	}
+];
+
 const MIGRATE = "POPULACE_MIGRATION";
 
 export interface PopulaceGrowth {
@@ -71,7 +83,7 @@ export interface PopulaceMigration {
 }
 
 export type PopulaceAction = TickAction | PopulaceGrowth | PopulaceMigration | WorkAction | EmployeeWorkAction
-	| Trade;
+	| Trade | Offer;
 
 export function * generatePopulaceActions(populace: Populace) {
 	const populaceClass = POPULACE_CLASSES[populace.populaceClassId];
@@ -82,6 +94,13 @@ export function * generatePopulaceActions(populace: Populace) {
 	);
 
 	yield * generateConsumerActions(populace.stockpile, consumerResources);
+	
+	yield offer({
+		resourceId: 'unskilledLabour',
+		stockpileId: populace.stockpile.id,
+		volume: applyModifiers(populace, LABOUR_MODIFIERS),
+		locationId: '', // TODO,
+	})
 
 	// TODO: migration
 
@@ -120,9 +139,21 @@ export function populaceReducer(state: Populace, action: PopulaceAction): Popula
 			return {
 				...state,
 				health: health,
+				stockpile: stockpileReducer(state.stockpile, action),
 			}
 		}
 
+		case OFFER: {
+			if (action.stockpileId === state.stockpile.id && action.resourceId === 'unskilledLabour') {
+				return {
+					...state,
+					stockpile: applyConsumeResources(state.stockpile, {
+						unskilledLabour: -action.volume,
+					}),
+				}
+			}
+			return state;
+		}
 		case TRADE: {
 			return {
 				...state,

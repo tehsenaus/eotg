@@ -17,8 +17,8 @@ export enum MarketLevel {
     GLOBAL = 4,
 }
 
-export interface Order {
-    type: typeof OFFER | typeof BID;
+export interface Order<Type> {
+    type: Type;
     resourceId: ResourceId;
     // price: number;
     volume: number;
@@ -32,23 +32,26 @@ export interface Order {
     stockpileId: string;
 }
 
+export type Bid = Order<typeof BID>;
+export type Offer = Order<typeof OFFER>;
+
 export interface Trade {
     type: typeof TRADE;
     price: number;
     volume: number;
-    bid: Order;
-    offer: Order;
+    bid: Bid;
+    offer: Offer;
 }
 
 export interface MarketResource {
-    bids: Order [];
-    offers: Order []; // sorted by price, ascending
+    bids: Bid [];
+    offers: Offer []; // sorted by price, ascending
     
     volume: number;
     avgPrice: number;
 
-    lastBids?: Order [];
-    lastOffers?: Order [];
+    lastBids?: Bid [];
+    lastOffers?: Offer [];
 }
 
 export interface Market {
@@ -62,14 +65,14 @@ export interface MarketTrades {
     trades: Trade [];
 }
 
-export function bid(props: Omit<Order, 'type'>): Order {
+export function bid(props: Omit<Bid, 'type'>): Bid {
     return {
         type: BID,
         ...props,
     }
 }
 
-export function offer(props: Omit<Order, 'type'>): Order {
+export function offer(props: Omit<Offer, 'type'>): Offer {
     return {
         type: OFFER,
         ...props,
