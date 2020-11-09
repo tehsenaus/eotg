@@ -51,13 +51,22 @@ export function stockpileReducer(state: Stockpile, action: StockpileAction) {
 			return applyConsumeResources(state, action.resources);
 		}
 		case TRADE: {
-			if (action.bid.stockpileId == state.id) {
+			if (action.bid.stockpileId === state.id) {
 				return {
 					...state,
 					wealth: state.wealth - action.price * action.volume,
 					resources: {
 						...state.resources,
 						[action.bid.resourceId]: getStockpileQty(state, action.bid.resourceId) + action.volume,
+					},
+				}
+			} else if (action.offer.stockpileId === state.id) {
+				return {
+					...state,
+					wealth: state.wealth + action.price * action.volume,
+					resources: {
+						...state.resources,
+						[action.bid.resourceId]: getStockpileQty(state, action.bid.resourceId) - action.volume,
 					},
 				}
 			}

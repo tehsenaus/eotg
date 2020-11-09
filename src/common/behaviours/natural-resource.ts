@@ -1,3 +1,4 @@
+import { ResourceId } from "../entities/resources";
 
 export interface NaturalResourceOptions {
 	// naturalCapacity is the total amount of the resource which is available to
@@ -15,6 +16,8 @@ export interface NaturalResource extends NaturalResourceOptions {
 	totalWork: number;
 	totalAmt: number;
 }
+
+export type NaturalResourceDict = { [P in ResourceId]?: NaturalResource };
 
 export function create(options: NaturalResourceOptions): NaturalResource {
 	const decay = options.extractRate / (options.naturalCapacity / 2);

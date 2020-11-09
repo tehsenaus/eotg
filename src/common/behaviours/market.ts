@@ -121,19 +121,37 @@ export function * generateMarketResourceActions(marketResource: MarketResource) 
     const bidsFillPct = Math.min(1, offerVolume / bidVolume);
     const offersFillPct = Math.min(1, bidVolume / offerVolume);
 
-    for (let bid of marketResource.bids) {
-        const volume = bid.volume * bidsFillPct;
+    let bidIndex = 0;
+    let offerIndex = 0;
+    let bidVolumeTaken = 0;
+    let offerVolumeTaken = 0;
+
+    while (bidIndex < marketResource.bids.length && offerIndex < marketResource.offers.length) {
+        const bid = marketResource.bids[bidIndex];
+        const offer = marketResource.offers[offerIndex];
+
+        const bidVolume = bid.volume * bidsFillPct;
+        const offerVolume = offer.volume * offersFillPct;
+        const volume = Math.min(bidVolume, offerVolume);
+
         yield trade({
             volume,
             price: marketResource.avgPrice,
             bid,
-            offer: offer({
-                resourceId: bid.resourceId,
-                volume,
-                stockpileId: '<dummy>',
-                locationId: '',
-            })
-        })
+            offer,
+        });
+
+        bidVolumeTaken += volume;
+        if (bidVolumeTaken >= bidVolume) {
+            bidIndex++;
+            bidVolumeTaken = 0;
+        }
+
+        offerVolumeTaken += volume;
+        if (offerVolumeTaken >= offerVolume) {
+            offerIndex++;
+            offerVolumeTaken = 0;
+        }
     }
 }
 

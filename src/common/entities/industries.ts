@@ -1,14 +1,24 @@
+import { ResourceDict, ResourceId } from "./resources";
 
-export default {
+export interface IndustrialProcess {
+	id: string;
+	// type: IndustrialProcessType;
+	naturalResources: ResourceDict;
+	input: ResourceDict;
+	output: ResourceDict;
+}
+
+export const INDUSTRIES = {
 
 	// Primary
 
 	grainFarm: {
-		natural: {
-			water: 1, solar: 10
+		naturalResources: {
+			water: 1,
+			solar: 10,
 		},
 		input: {
-			labour: 1
+			unskilledLabour: 1
 		},
 		capacity: 5,
 		output: {
@@ -16,15 +26,28 @@ export default {
 		}
 	},
 
+	meatFarm: {
+		naturalResources: {
+			water: 10,
+		},
+		input: {
+			labour: 1
+		},
+		capacity: 5,
+		output: {
+			meat: 1
+		}
+	},
+
 	logging: extractionProcess('wood'),
-	coalMine: extractionProcess('coal'),
-	clayQuarry: extractionProcess('clay'),
-	limestoneQuarry: extractionProcess('limestone'),
-	ironOreQuarry: extractionProcess('ironOre'),
-	aluminiumOreQuarry: extractionProcess('aluminiumOre'),
-	siliconQuarry: extractionProcess('silicon'),
-	copperMine: extractionProcess('copper'),
-	oilRig: extractionProcess('oil'),
+	// coalMine: extractionProcess('coal'),
+	// clayQuarry: extractionProcess('clay'),
+	// limestoneQuarry: extractionProcess('limestone'),
+	// ironOreQuarry: extractionProcess('ironOre'),
+	// aluminiumOreQuarry: extractionProcess('aluminiumOre'),
+	// siliconQuarry: extractionProcess('silicon'),
+	// copperMine: extractionProcess('copper'),
+	// oilRig: extractionProcess('oil'),
 
 
 	// Refining
@@ -77,16 +100,18 @@ export default {
 	}
 };
 
-function extractionProcess(name, units?, capacity?) {
-	var nat = {}, out = {};
+export default INDUSTRIES;
+
+function extractionProcess(name: ResourceId, units?): IndustrialProcess {
+	const nat = {}, out = {};
 	nat[name] = units || 1;
 	out[name] = units || 1;
 	return {
-		natural: nat,
+		id: name,
+		naturalResources: nat,
 		input: {
-			labour: 1,
+			unskilledLabour: 1,
 		},
-		capacity: capacity || 10,
 		output: out
 	}
 }

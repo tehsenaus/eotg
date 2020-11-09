@@ -1,6 +1,8 @@
 import {mapValues} from "lodash";
 import { EntityDict } from "./game-entity";
+import { generateIndustryActions, Industry } from "./industry";
 import { generateMarketActions, Market, marketReducer, offer } from "./market";
+import { NaturalResourceDict } from "./natural-resource";
 import { generatePopulaceActions, Populace, populaceReducer } from "./populace";
 
 /**
@@ -10,11 +12,17 @@ export interface Locality {
     id: string;
     populaces: EntityDict<Populace>;
     market: Market;
+    naturalResources: NaturalResourceDict;
+    industries: EntityDict<Industry>;
 }
 
 export function * generateLocalityActions(locality: Locality) {
     for (const populaceId of Object.keys(locality.populaces)) {
         yield * generatePopulaceActions(locality.populaces[populaceId]);
+    }
+
+    for (const industryId in locality.industries) {
+        yield * generateIndustryActions(locality.industries[industryId]);
     }
 
     yield offer({

@@ -4,6 +4,7 @@ import { fixedTimeStepScheduler } from "./engine/scheduler";
 import { time, tick, TimeState, timeReducer } from "./behaviours/time";
 import { createMarket, MarketLevel } from "./behaviours/market";
 import { generateLocalityActions, generateLocalityTrades, Locality, localityReducer } from "./behaviours/locality";
+import { createIndustry } from "./behaviours/industry";
 
 export interface GameState {
 	gameTime: TimeState;
@@ -36,6 +37,13 @@ const EMPTY_STATE: GameState = {
 			locationId: 'home',
 			level: MarketLevel.LOCAL,
 		}),
+		naturalResources: {},
+		industries: {
+			'farm': createIndustry({
+				processId: 'grainFarm',
+				wealth: 1000,
+			})
+		}
 	}
 };
 

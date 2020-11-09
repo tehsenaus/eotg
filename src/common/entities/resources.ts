@@ -1,10 +1,19 @@
 
 export const resourceTypes = {
+	water: {
+
+	},
+	solar: {
+		halfLife: 0,
+	},
+
 	unskilledLabour: {
+		unit: 'man days',
 		halfLife: 0
 	},
 
 	grain: {
+		unit: 'tonne',
 		halfLife: 30
 	},
 
