@@ -24,8 +24,16 @@ export interface Populace {
 
 export type PopulaceModifier = Modifier<Populace>;
 
-const HEALTHY_DAILY_DEATH_PROBABILITY = 0.00005;
-const UNHEALTHY_DAILY_DEATH_PROBABILITY = 0.001;
+const BASE_BIRTHS_PER_1000_PER_YEAR = 30;
+const BIRTH_RATE_MODIFIERS: PopulaceModifier [] = [
+	{
+		id: 'base',
+		valueAccessor: populace => BASE_BIRTHS_PER_1000_PER_YEAR / 365 / 1000,
+	}
+];
+
+const HEALTHY_DAILY_DEATH_PROBABILITY = 1 / 85 / 365;
+const UNHEALTHY_DAILY_DEATH_PROBABILITY = 1 / 5 / 365;
 const DEATH_RATE_MODIFIERS: PopulaceModifier [] = [
 	{
 		id: 'base',
@@ -180,7 +188,7 @@ export function populaceReducer(state: Populace, action: PopulaceAction): Popula
 }
 
 export function getBirthRate(populace: Populace) {
-	return 0.0001;
+	return applyModifiers(populace, BIRTH_RATE_MODIFIERS);
 }
 
 export function getDeathRate(populace: Populace) {

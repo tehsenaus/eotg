@@ -6,6 +6,7 @@ import { EntityDict } from "./game-entity";
 import { TICK } from "./time";
 import { off } from "process";
 
+export const TRADING_START = "market-trading-start";
 export const OFFER = "market-offer";
 export const BID = "market-bid";
 export const TRADE = "market-trade";
@@ -16,6 +17,10 @@ export enum MarketLevel {
     NATIONAL = 2,
     COMMON = 3,
     GLOBAL = 4,
+}
+
+export interface TradingStartAction {
+    type: typeof TRADING_START;
 }
 
 export interface Order<Type> {
@@ -64,6 +69,10 @@ export interface Market {
 export interface MarketTrades {
     market: Market;
     trades: Trade [];
+}
+
+export function startTrading(): TradingStartAction {
+    return { type: TRADING_START };
 }
 
 export function bid(props: Omit<Bid, 'type'>): Bid {

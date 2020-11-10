@@ -1,8 +1,8 @@
 
 import { run } from "./engine/game-loop";
 import { fixedTimeStepScheduler } from "./engine/scheduler";
-import { time, tick, TimeState, timeReducer } from "./behaviours/time";
-import { createMarket, MarketLevel } from "./behaviours/market";
+import { time, tick, TimeState, timeReducer, tickStart } from "./behaviours/time";
+import { createMarket, MarketLevel, startTrading } from "./behaviours/market";
 import { generateLocalityActions, generateLocalityTrades, Locality, localityReducer } from "./behaviours/locality";
 import { createIndustry } from "./behaviours/industry";
 
@@ -55,10 +55,11 @@ export const defaultInitialState: GameState = [
 // These are the actions which are dispatched on each iteration
 // of the game loop.
 function * generateGameLoopActions(state: GameState) {
+	yield tickStart();
+
 	yield * generateLocalityActions(state.locality);
 
-	const nextState = yield { type: '' };
-
+	const nextState = yield startTrading();
 	yield * generateLocalityTrades(nextState.locality);
 
 	// Advance game time

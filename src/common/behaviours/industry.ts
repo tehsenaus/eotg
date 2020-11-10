@@ -1,18 +1,17 @@
 
 import { mapValues } from "lodash";
-import { gameEntityReducer } from "./game-entity";
-import { offer, Trade, TRADE } from "./market";
+import { offer, Trade, TRADE, TradingStartAction, TRADING_START } from "./market";
 import { TraderState, marketPrice } from "./trader";
 
 import * as createDebug from "debug";
-import { TICK, TickAction } from "./time";
+import { TICK, TickAction, TickStartAction } from "./time";
 import { applyConsumeResources, getStockpileQty, Stockpile, stockpileReducer } from "./stockpile";
 import { IndustrialProcess, INDUSTRIES } from "../entities/industries";
-import { generateConsumerActions } from "./consumer";
-import { ResourceId } from "../entities/resources";
-const debug = createDebug('empires:behaviours:industry');
+import { calculateDesiredResources, generateConsumerActions } from "./consumer";
+import { ResourceDict, ResourceId } from "../entities/resources";
+import { updateExponentialMovingAvgDict } from "../engine/stats";
 
-const createIndustryReducer = gameEntityReducer('industries');
+const debug = createDebug('eotg:behaviours:industry');
 
 export interface Industry {
 	id: string;
@@ -22,9 +21,16 @@ export interface Industry {
 
 	// How many units of work the industry can do per produce cycle
 	capacity: number;
+
+	lastWealth: number;
+	initialWealth: number;
+	initialCapacity: number;
+	lastCapacityUsed: number;
+	lastSales: ResourceDict;
+	rollingLastSales: ResourceDict;
 }
 
-export type IndustryAction = Trade | TickAction;
+export type IndustryAction = Trade | TickAction | TradingStartAction;
 
 export function createIndustry({
 	processId,
@@ -41,14 +47,23 @@ export function createIndustry({
 			wealth,
 			resources: {},
 		},
-		capacity,
+		initialWealth: wealth,
+		lastWealth: wealth,
+		capacity: capacity,
+		initialCapacity: capacity / 10,
+		lastCapacityUsed: 0,
+		lastSales: {},
+		rollingLastSales: {},
 	}
 }
 
 export function * generateIndustryActions(industry: Industry) {
+	const desiredCapacity = getDesiredCapacity(industry);
+	const capacity = Math.min(desiredCapacity, industry.capacity);
+
 	const inputs = mapValues(
 		industry.process.input,
-		amount => amount * industry.capacity
+		amount => amount * capacity
 	);
 
 	yield * generateConsumerActions(industry.stockpile, inputs);
@@ -68,7 +83,23 @@ export function * generateIndustryActions(industry: Industry) {
 
 export function industryReducer(state: Industry, action: IndustryAction): Industry {
 	switch (action.type) {
+		case TRADING_START: {
+			return {
+				...state,
+				lastSales: {},
+				lastWealth: state.stockpile.wealth,
+			}
+		}
 		case TRADE: {
+			if (action.offer.stockpileId === state.stockpile.id) {
+				state = {
+					...state,
+					lastSales: {
+						...state.lastSales,
+						[action.offer.resourceId]: (state.lastSales[action.offer.resourceId] || 0) + action.volume,
+					}
+				}
+			}
 			return {
 				...state,
 				stockpile: stockpileReducer(state.stockpile, action),
@@ -76,9 +107,11 @@ export function industryReducer(state: Industry, action: IndustryAction): Indust
 		}
 		case TICK: {
 			state = applyProduce(state);
+			state = maybeExpand(state);
 			return {
 				...state,
 				stockpile: stockpileReducer(state.stockpile, action),
+				rollingLastSales: updateExponentialMovingAvgDict(0.5, state.rollingLastSales, state.lastSales),
 			}
 		}
 	}
@@ -86,12 +119,16 @@ export function industryReducer(state: Industry, action: IndustryAction): Indust
 	return state;
 }
 
+export function getLastProfit(industry: Industry): number {
+	return industry.stockpile.wealth - industry.lastWealth;
+}
+
 function applyProduce(industry: Industry): Industry {
 	const capacityAvailable = Math.min(...Object.values(mapValues(
 		industry.process.input,
 		(amount, resourceId) => getStockpileQty(industry.stockpile, resourceId as ResourceId) / amount
 	)));
-	
+
 	const inputsConsumed = mapValues(
 		industry.process.input,
 		amount => amount * capacityAvailable
@@ -105,11 +142,52 @@ function applyProduce(industry: Industry): Industry {
 
 	return {
 		...industry,
+		lastCapacityUsed: capacityAvailable,
 		stockpile: applyConsumeResources(
 			applyConsumeResources(industry.stockpile, inputsConsumed),
 			outputsProduced
 		),
 	}
+}
+
+function maybeExpand(industry: Industry): Industry {
+	if (industry.lastCapacityUsed < industry.capacity - industry.initialCapacity) {
+		return industry;
+	}
+	if (getLastProfit(industry) > 0 && industry.stockpile.wealth >= industry.initialWealth * 2) {
+		console.log('expand', industry);
+		return {
+			...industry,
+			stockpile: {
+				...industry.stockpile,
+				wealth: industry.stockpile.wealth - industry.initialWealth,
+			},
+			capacity: industry.capacity + industry.initialCapacity,
+		}
+	}
+	return industry;
+}
+
+function getDesiredCapacity(industry: Industry) {
+	// special case for start
+	if (industry.lastWealth === industry.initialWealth) {
+		return industry.capacity;
+	}
+
+	const desiredResources = calculateDesiredResources(industry.rollingLastSales);
+	const desiredCapacity = Math.max(...Object.values(mapValues(
+		desiredResources,
+		(desiredAmount, resourceId) =>
+			(desiredAmount - (
+				getStockpileQty(industry.stockpile, resourceId as ResourceId)
+				- Math.max(industry.lastSales[resourceId], industry.rollingLastSales[resourceId])
+			))
+			/ industry.process.output[resourceId]
+	)));
+
+	console.log('desired-capacity', desiredCapacity, industry.lastSales, industry.stockpile.resources, desiredResources);
+
+	return Math.max(0, desiredCapacity);
 }
 
 // export function estimateProfitMargin(process: IndustrialProcess, traderId: string, state: Industry) {
