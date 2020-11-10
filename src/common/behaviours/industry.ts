@@ -1,14 +1,15 @@
 
 import { mapValues } from "lodash";
 import { gameEntityReducer } from "./game-entity";
-import { Trade, TRADE } from "./market";
+import { offer, Trade, TRADE } from "./market";
 import { TraderState, marketPrice } from "./trader";
 
 import * as createDebug from "debug";
 import { TICK, TickAction } from "./time";
-import { Stockpile, stockpileReducer } from "./stockpile";
+import { applyConsumeResources, getStockpileQty, Stockpile, stockpileReducer } from "./stockpile";
 import { IndustrialProcess, INDUSTRIES } from "../entities/industries";
 import { generateConsumerActions } from "./consumer";
+import { ResourceId } from "../entities/resources";
 const debug = createDebug('empires:behaviours:industry');
 
 const createIndustryReducer = gameEntityReducer('industries');
@@ -51,6 +52,18 @@ export function * generateIndustryActions(industry: Industry) {
 	);
 
 	yield * generateConsumerActions(industry.stockpile, inputs);
+
+	for (let resourceId in industry.process.output) {
+		const amount = getStockpileQty(industry.stockpile, resourceId as ResourceId);
+		if (amount > 0) {
+			yield offer({
+				resourceId: resourceId as ResourceId,
+				volume: amount,
+				locationId: '', // TODO
+				stockpileId: industry.stockpile.id,
+			});
+		}
+	}
 }
 
 export function industryReducer(state: Industry, action: IndustryAction): Industry {
@@ -62,27 +75,42 @@ export function industryReducer(state: Industry, action: IndustryAction): Indust
 			}
 		}
 		case TICK: {
-			return applyProduce(state, action);
+			state = applyProduce(state);
+			return {
+				...state,
+				stockpile: stockpileReducer(state.stockpile, action),
+			}
 		}
 	}
 
 	return state;
 }
 
-export const applyProduce = createIndustryReducer((industry: Industry, action) => {
-	// Estimate profitability of running the industry
-	// const profitMargin = estimateProfitMargin(industry.process, industry.traderId, state);
+function applyProduce(industry: Industry): Industry {
+	const capacityAvailable = Math.min(...Object.values(mapValues(
+		industry.process.input,
+		(amount, resourceId) => getStockpileQty(industry.stockpile, resourceId as ResourceId) / amount
+	)));
+	
+	const inputsConsumed = mapValues(
+		industry.process.input,
+		amount => amount * capacityAvailable
+	);
+	const outputsProduced = mapValues(
+		industry.process.output,
+		amount => -amount * capacityAvailable
+	);
 
-	// if ( profitMargin > 1 ) {
-	// 	debug('%s: produce: producing', industry.id);
+	console.log('produce', capacityAvailable, outputsProduced);
 
-	// 	var inputStockWorkUnits = getInputStockWorkUnits(industry, state);
-
-
-	// }
-
-	return industry;
-});
+	return {
+		...industry,
+		stockpile: applyConsumeResources(
+			applyConsumeResources(industry.stockpile, inputsConsumed),
+			outputsProduced
+		),
+	}
+}
 
 // export function estimateProfitMargin(process: IndustrialProcess, traderId: string, state: Industry) {
 // 	const inputsPricePerWorkUnit = estimatePricePerWorkUnit(process.input, traderId, state);

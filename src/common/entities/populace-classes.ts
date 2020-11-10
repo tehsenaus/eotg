@@ -1,4 +1,4 @@
-import { ResourceDict } from "./resources";
+import { convertToResourceUnit, ResourceDict } from "./resources";
 
 export interface PopulaceClass {
     dailyNeedsPerCapita: {
@@ -11,7 +11,7 @@ export const POPULACE_CLASSES = {
     unskilled: {
         dailyNeedsPerCapita: {
             life: {
-                grain: 0.01,
+                grain: convertToResourceUnit('grain', 500, 'g'),
             }
         }
     } as PopulaceClass

@@ -1,6 +1,6 @@
 import {mapValues} from "lodash";
 import { EntityDict } from "./game-entity";
-import { generateIndustryActions, Industry } from "./industry";
+import { generateIndustryActions, Industry, industryReducer } from "./industry";
 import { generateMarketActions, Market, marketReducer, offer } from "./market";
 import { NaturalResourceDict } from "./natural-resource";
 import { generatePopulaceActions, Populace, populaceReducer } from "./populace";
@@ -24,13 +24,6 @@ export function * generateLocalityActions(locality: Locality) {
     for (const industryId in locality.industries) {
         yield * generateIndustryActions(locality.industries[industryId]);
     }
-
-    yield offer({
-        resourceId: 'grain',
-        volume: 100,
-        locationId: '',
-        stockpileId: '',
-    })
 }
 
 export function * generateLocalityTrades(locality: Locality) {
@@ -42,5 +35,6 @@ export function localityReducer(locality: Locality, action): Locality {
         ...locality,
         populaces: mapValues(locality.populaces, populace => populaceReducer(populace, action)),
         market: marketReducer(locality.market, action),
+        industries: mapValues(locality.industries, industry => industryReducer(industry, action)),
     }
 }

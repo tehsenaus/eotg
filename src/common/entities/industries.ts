@@ -1,4 +1,5 @@
-import { ResourceDict, ResourceId } from "./resources";
+
+import { convertToResourceUnit, ResourceDict, ResourceId } from "./resources";
 
 export interface IndustrialProcess {
 	id: string;
@@ -13,16 +14,20 @@ export const INDUSTRIES = {
 	// Primary
 
 	grainFarm: {
+		// https://science.howstuffworks.com/environmental/green-science/question638.htm
 		naturalResources: {
 			water: 1,
 			solar: 10,
+			// land: convertToResourceUnit('land', 1, 'ac')
 		},
 		input: {
-			unskilledLabour: 1
+			// https://www.nationmaster.com/country-info/stats/Agriculture/Workers-per-hectare
+			// Assume 2 per acre (low-tech farming)
+			unskilledLabour: 2,
 		},
 		capacity: 5,
 		output: {
-			grain: 10
+			grain: convertToResourceUnit('grain', 3 / 365, 't') // (3t / acre / year)
 		}
 	},
 

@@ -4,6 +4,7 @@ import { sum } from "d3-array";
 import { ResourceId, resourceTypes } from "../entities/resources";
 import { EntityDict } from "./game-entity";
 import { TICK } from "./time";
+import { off } from "process";
 
 export const OFFER = "market-offer";
 export const BID = "market-bid";
@@ -168,6 +169,7 @@ export function marketReducer(state: Market, action): Market {
                         offers: [],
                         lastBids: marketResource.bids,
                         lastOffers: marketResource.offers,
+                        avgPrice: updatePrice(marketResource),
                     })
                 )
             }
@@ -204,4 +206,17 @@ export function marketReducer(state: Market, action): Market {
         }
     }
     return state;
+}
+
+function updatePrice(marketResource: MarketResource): number {
+    const offerVolume = sum(marketResource.offers, d => d.volume);
+    const bidVolume = sum(marketResource.bids, d => d.volume);
+
+    if (offerVolume === 0 || bidVolume === 0) {
+        return marketResource.avgPrice;
+    }
+
+    const demandFactor = (bidVolume - offerVolume) / Math.max(bidVolume, offerVolume);
+
+    return (1 + 0.01 * demandFactor) * marketResource.avgPrice;
 }
