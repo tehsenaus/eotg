@@ -1,14 +1,30 @@
 import React from 'react';
 import styled from 'styled-components'
+import { sum } from 'd3-array';
+import { getGDP, Market } from '../../../common/behaviours/market';
 
 import SparkLine from '../vis/SparkLine';
 import NavWidget from './NavWidget';
+import { Selector, useSelector } from 'react-redux';
+import { State } from '../../../app/store';
+import { GameState } from '../../../common/eotg';
 
-export default () => {
+export interface EconomyNavProps {
+    marketSelector: Selector<GameState, Market>;
+}
+
+export default ({ marketSelector }: EconomyNavProps) => {
+    const market = useSelector<State, Market>(state => marketSelector(state.gameState));
+    const gdp = getGDP(market);
+
+    const gdpHistory = useSelector<State, number []>(state =>
+        state.gameStateHistory.map(gameState => getGDP(marketSelector(gameState)))
+    );
+
     return <NavWidget title="Economy">
         <Container>
-            <GdpSparkLine />
-            <Amount>12bn</Amount>
+            <GdpSparkLine values={gdpHistory} />
+            <Amount>{ new Intl.NumberFormat('en-GB', { notation: 'compact' }).format(gdp) }</Amount>
             <Label>GDP</Label>
         </Container>
     </NavWidget>;
@@ -23,9 +39,9 @@ const Container = styled.div`
         "sparkline label";
 `;
 
-const GdpSparkLine = styled(({ className }) => {
+const GdpSparkLine = styled(({ className, values }) => {
     return <div className={className}>
-        <SparkLine width={160} height={60} />
+        <SparkLine width={160} height={60} values={values} />
     </div>;
 })`
     grid-area: sparkline;

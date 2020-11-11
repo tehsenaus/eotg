@@ -1,5 +1,8 @@
 
-export function * run(reducer, tickGameLoop, state) {
+export function * run(reducer, tickGameLoop) {
+	// get the initial state
+	let state = reducer(undefined, { type: '' });
+
 	while(true) {
 		const gameLoopActions = tickGameLoop(state);
 		while(true) {

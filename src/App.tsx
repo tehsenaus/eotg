@@ -6,21 +6,21 @@ import EconomyNav from './ui/components/navbar/EconomyNav';
 import MarketsNav from './ui/components/navbar/MarketsNav';
 import { useSelector } from 'react-redux';
 import PopulationNav from './ui/components/navbar/PopulationNav';
-import { GameState } from './common/eotg';
+import { State } from './app/store';
 
 function App() {
-  const state = useSelector<GameState, GameState>(state => state);
+  const state = useSelector<State, State>(state => state);
 
   return (
     <div className="App">
       <header className="App-header">
         
-        <EconomyNav />
+        <EconomyNav marketSelector={gameState => gameState.locality.market} />
         <MarketsNav />
-        <PopulationNav populaces={Object.values(state.locality.populaces)} />
+        <PopulationNav populacesSelector={gameState => Object.values(gameState.locality.populaces)} />
 
         <pre>
-          {JSON.stringify(state, null, 2)}
+          {JSON.stringify(state.gameState, null, 2)}
         </pre>
 
         <p>

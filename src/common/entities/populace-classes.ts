@@ -14,7 +14,14 @@ export const POPULACE_CLASSES = {
                 grain: convertToResourceUnit('grain', 500, 'g'),
             }
         }
-    } as PopulaceClass
+    } as PopulaceClass,
+    capitalist: {
+        dailyNeedsPerCapita: {
+            life: {
+                grain: convertToResourceUnit('grain', 800, 'g'),
+            }
+        }
+    }
 }
 
 export type PopulaceClassId = keyof typeof POPULACE_CLASSES;

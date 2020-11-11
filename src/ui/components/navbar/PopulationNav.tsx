@@ -6,16 +6,25 @@ import { Populace } from '../../../common/behaviours/populace';
 
 import SparkLine from '../vis/SparkLine';
 import NavWidget from './NavWidget';
+import { Selector, useSelector } from 'react-redux';
+import { State } from '../../../app/store';
+import { GameState } from '../../../common/eotg';
 
 interface PopulationNavProps {
-    populaces: Populace [];
+    populacesSelector: Selector<GameState, Populace []>;
 }
 
-export default ({ populaces }: PopulationNavProps) => {
-    const population = sum(populaces, populace => populace.population);
+export default ({ populacesSelector }: PopulationNavProps) => {
+    const populaces = useSelector<State, Populace []>(state => populacesSelector(state.gameState));
+    const population = getPopulation(populaces);
+
+    const populationHistory = useSelector<State, number []>(state =>
+        state.gameStateHistory.map(gameState => getPopulation(populacesSelector(gameState)))
+    );
+
     return <NavWidget title="Population">
         <Container>
-            <GdpSparkLine />
+            <GdpSparkLine values={populationHistory}/>
             <Amount>{~~population}</Amount>
             <Label>pop.</Label>
         </Container>
@@ -31,9 +40,9 @@ const Container = styled.div`
         "sparkline label";
 `;
 
-const GdpSparkLine = styled(({ className }) => {
+const GdpSparkLine = styled(({ className, values }) => {
     return <div className={className}>
-        <SparkLine width={160} height={60} />
+        <SparkLine width={160} height={60} values={values} />
     </div>;
 })`
     grid-area: sparkline;
@@ -51,3 +60,7 @@ const Label = styled.p`
     margin: 0;
     margin-bottom: 0.25em;
 `;
+
+function getPopulation(populaces) {
+    return sum(populaces, populace => populace.population);
+}

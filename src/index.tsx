@@ -16,9 +16,10 @@ ReactDOM.render(
   document.getElementById('root')
 );
 
-eotg((state, action) => {
+eotg((_, action) => {
   store.dispatch(action);
-  return store.getState();
+  const state = store.getState();
+  return state.gameState;
 });
 
 // If you want your app to work offline and load faster, you can change

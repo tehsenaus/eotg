@@ -5,6 +5,7 @@ import { time, tick, TimeState, timeReducer, tickStart } from "./behaviours/time
 import { createMarket, MarketLevel, startTrading } from "./behaviours/market";
 import { generateLocalityActions, generateLocalityTrades, Locality, localityReducer } from "./behaviours/locality";
 import { createIndustry } from "./behaviours/industry";
+import { createPopulace } from "./behaviours/populace";
 
 export interface GameState {
 	gameTime: TimeState;
@@ -18,20 +19,18 @@ const EMPTY_STATE: GameState = {
 	locality: {
 		id: 'home',
 		populaces: {
-			'': {
-				id: '',
+			'unskilled': createPopulace({
 				populaceClassId: 'unskilled',
+				locationId: 'home',
 				population: 10000,
-				health: 1,
-				lifeNeedsSatisfactionPct: 1,
-				stockpile: {
-					id: '',
-					wealth: 10000,
-					resources: {
-
-					}
-				}
-			},
+				wealthPerCapita: 10,
+			}),
+			'capitalist': createPopulace({
+				populaceClassId: 'capitalist',
+				locationId: 'home',
+				population: 10,
+				wealthPerCapita: 1000,
+			}),
 		},
 		market: createMarket({
 			locationId: 'home',
@@ -73,11 +72,12 @@ export function gameLogicReducer(state: GameState = defaultInitialState, action)
 	}
 }
 
-export default function main(reducer = gameLogicReducer, initialState = defaultInitialState) {
+export default function main(
+		reducer = gameLogicReducer,
+) {
 	const gameLoopGenerator = run(
 		reducer,
-		generateGameLoopActions,
-		initialState
+		generateGameLoopActions
 	);
 
 	return fixedTimeStepScheduler(

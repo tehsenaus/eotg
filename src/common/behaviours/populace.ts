@@ -93,6 +93,27 @@ export interface PopulaceMigration {
 export type PopulaceAction = TickAction | PopulaceGrowth | PopulaceMigration | WorkAction | EmployeeWorkAction
 	| Trade | Offer;
 
+export function createPopulace({
+	locationId,
+	populaceClassId,
+	population,
+	wealthPerCapita,
+}): Populace {
+	const id = locationId + '/' + populaceClassId;
+	return {
+		id,
+		populaceClassId,
+		population,
+		health: 1,
+		lifeNeedsSatisfactionPct: 1,
+		stockpile: {
+			id: id + '/stockpile',
+			wealth: population * wealthPerCapita,
+			resources: {}
+		}
+	}
+}
+
 export function * generatePopulaceActions(populace: Populace) {
 	const populaceClass = POPULACE_CLASSES[populace.populaceClassId];
 
@@ -103,12 +124,14 @@ export function * generatePopulaceActions(populace: Populace) {
 
 	yield * generateConsumerActions(populace.stockpile, consumerResources);
 	
-	yield offer({
-		resourceId: 'unskilledLabour',
-		stockpileId: populace.stockpile.id,
-		volume: applyModifiers(populace, LABOUR_MODIFIERS),
-		locationId: '', // TODO,
-	})
+	if (populace.populaceClassId === 'unskilled') {
+		yield offer({
+			resourceId: 'unskilledLabour',
+			stockpileId: populace.stockpile.id,
+			volume: applyModifiers(populace, LABOUR_MODIFIERS),
+			locationId: '', // TODO,
+		})
+	}
 
 	// TODO: migration
 

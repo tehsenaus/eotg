@@ -50,7 +50,7 @@ export function createIndustry({
 		initialWealth: wealth,
 		lastWealth: wealth,
 		capacity: capacity,
-		initialCapacity: capacity / 10,
+		initialCapacity: capacity * 0.5,
 		lastCapacityUsed: 0,
 		lastSales: {},
 		rollingLastSales: {},

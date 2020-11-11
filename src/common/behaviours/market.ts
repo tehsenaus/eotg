@@ -3,8 +3,7 @@ import * as _ from "lodash";
 import { sum } from "d3-array";
 import { ResourceId, resourceTypes } from "../entities/resources";
 import { EntityDict } from "./game-entity";
-import { TICK } from "./time";
-import { off } from "process";
+import { TickStartAction, TICK_START } from "./time";
 
 export const TRADING_START = "market-trading-start";
 export const OFFER = "market-offer";
@@ -70,6 +69,8 @@ export interface MarketTrades {
     market: Market;
     trades: Trade [];
 }
+
+export type MarketAction = TickStartAction | TradingStartAction | Bid | Offer | Trade;
 
 export function startTrading(): TradingStartAction {
     return { type: TRADING_START };
@@ -165,9 +166,9 @@ export function * generateMarketResourceActions(marketResource: MarketResource) 
     }
 }
 
-export function marketReducer(state: Market, action): Market {
+export function marketReducer(state: Market, action: MarketAction): Market {
     switch (action.type) {
-        case TICK: {
+        case TICK_START: {
             return {
                 ...state,
                 resources: _.mapValues(
@@ -176,6 +177,7 @@ export function marketReducer(state: Market, action): Market {
                         ...marketResource,
                         bids: [],
                         offers: [],
+                        volume: 0,
                         lastBids: marketResource.bids,
                         lastOffers: marketResource.offers,
                         avgPrice: updatePrice(marketResource),
@@ -213,11 +215,30 @@ export function marketReducer(state: Market, action): Market {
                 }
             }
         }
+        case TRADE: {
+            return {
+                ...state,
+                resources: {
+                    ...state.resources,
+                    [action.bid.resourceId]: {
+                        ...state.resources[action.bid.resourceId],
+                        volume: state.resources[action.bid.resourceId].volume + action.volume,
+                    }
+                }
+            }
+        }
     }
     return state;
 }
 
-function updatePrice(marketResource: MarketResource): number {
+export function getGDP(market: Market) {
+    return sum(
+        Object.values(market.resources),
+        d => d.volume * d.avgPrice
+    ) * 365;
+}
+
+export function getDemandFactor(marketResource: MarketResource): number {
     const offerVolume = sum(marketResource.offers, d => d.volume);
     const bidVolume = sum(marketResource.bids, d => d.volume);
 
@@ -226,6 +247,12 @@ function updatePrice(marketResource: MarketResource): number {
     }
 
     const demandFactor = (bidVolume - offerVolume) / Math.max(bidVolume, offerVolume);
+
+    return demandFactor;
+}
+
+function updatePrice(marketResource: MarketResource): number {
+    const demandFactor = getDemandFactor(marketResource);
 
     return (1 + 0.01 * demandFactor) * marketResource.avgPrice;
 }
