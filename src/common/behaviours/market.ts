@@ -1,29 +1,71 @@
 
 import * as _ from "lodash";
+import * as createDebug from "debug";
+import { sum } from "d3-array";
+import { ResourceId, resourceTypes } from "../entities/resources";
+import { EntityDict } from "./game-entity";
+import { TickStartAction, TICK_START } from "./time";
 
+const debug = createDebug('eotg:behaviours:market');
+
+export const TRADING_START = "market-trading-start";
+export const OFFER = "market-offer";
+export const BID = "market-bid";
 export const TRADE = "market-trade";
 
-export interface Order {
-    price: number;
-    volume: number;
+export enum MarketLevel {
+    LOCAL = 0,
+    REGIONAL = 1,
+    NATIONAL = 2,
+    COMMON = 3,
+    GLOBAL = 4,
 }
 
-export interface OrderBook {
-    bids: Order [];
-    asks: Order [];
+export interface TradingStartAction {
+    type: typeof TRADING_START;
+}
+
+export interface Order<Type> {
+    type: Type;
+    resourceId: ResourceId;
+    // price: number;
+    volume: number;
+
+    // In the case of an offer (to sell), who can see this?
+    // In the case of a bid (to buy), how far up the market hierarchy can we look for offers?
+    // scope: MarketLevel;
+
+    // TODO: factor in transport costs
+    locationId: string;
+    stockpileId: string;
+}
+
+export type Bid = Order<typeof BID>;
+export type Offer = Order<typeof OFFER>;
+
+export interface Trade {
+    type: typeof TRADE;
+    price: number;
+    volume: number;
+    bid: Bid;
+    offer: Offer;
+}
+
+export interface MarketResource {
+    bids: Bid [];
+    offers: Offer []; // sorted by price, ascending
+    
+    volume: number;
+    avgPrice: number;
+
+    lastBids?: Bid [];
+    lastOffers?: Offer [];
 }
 
 export interface Market {
-    orderBook: OrderBook;
-    volume: number;
-    avgPrice: number;
-}
-
-export interface Trade {
-    price: number;
-    volume: number;
-    buyOrder: Order;
-    sellOrder: Order;
+    level: MarketLevel;
+    locationId: string;
+    resources: EntityDict<MarketResource>;
 }
 
 export interface MarketTrades {
@@ -31,83 +73,192 @@ export interface MarketTrades {
     trades: Trade [];
 }
 
-export interface MarketState {
-    markets: { [id: string]: { [resourceId: string]: Market } };
+export type MarketAction = TickStartAction | TradingStartAction | Bid | Offer | Trade;
+
+export function startTrading(): TradingStartAction {
+    return { type: TRADING_START };
 }
 
-export function avgPrice(resourceId: string, marketId: string, state: MarketState) {
-
-}
-
-export function trade() {
+export function bid(props: Omit<Bid, 'type'>): Bid {
     return {
-        type: TRADE
+        type: BID,
+        ...props,
     }
 }
 
-export function createMarket(lastPrice = 1) {
+export function offer(props: Omit<Offer, 'type'>): Offer {
     return {
-        orderBook: {
-            bids: [], asks: []
-        },
-        volume: 0,
-        avgPrice: lastPrice
+        type: OFFER,
+        ...props,
     }
 }
 
-export function executeMarketOrders(market: Market): MarketTrades {
-    const remainingBids = _.sortBy(market.orderBook.bids, o => o.price);
-    const remainingAsks = _.sortBy(market.orderBook.asks, o => o.price);
-    const trades: Trade [] = [];
-    var volume = 0;
-    var priceVolume = 0;
+export function trade(props: Omit<Trade, 'type'>): Trade {
+    return {
+        type: TRADE,
+        ...props,
+    }
+}
 
-    for ( var i = 0, j = 0; i < remainingBids.length && j < remainingAsks.length; i++, j++ ) {
-        let topBid = remainingBids[remainingBids.length - (i+1)],
-            bottomAsk = remainingAsks[j];
+export function createMarket({ level, locationId }): Market {
+    return {
+        level,
+        locationId,
+        resources: _.mapValues(
+            resourceTypes,
+            () => ({
+                bids: [],
+                offers: [],
+                volume: 0,
+                avgPrice: 1,
+            })
+        )
+    };
+}
 
-        if ( topBid.price >= bottomAsk.price ) {
-            let trade: Trade = {
+export function * generateMarketActions(market: Market) {
+    for (let resourceId in market.resources) {
+        yield * generateMarketResourceActions(market.resources[resourceId]);
+    }
+}
 
-                // Use the mid price, as we have no concept of 'aggressor'
-                price: (topBid.price + bottomAsk.price) / 2,
+export function * generateMarketResourceActions(marketResource: MarketResource) {
+    // Here we match bids and offers to generate trades
+    const bidVolume = sum(marketResource.bids, d => d.volume);
+    const offerVolume = sum(marketResource.offers, d => d.volume);
 
-                volume: Math.min(topBid.volume, bottomAsk.volume),
+    if (offerVolume === 0 || bidVolume === 0) {
+        return;
+    }
 
-                buyOrder: topBid,
-                sellOrder: bottomAsk
-            }
+    const bidsFillPct = Math.min(1, offerVolume / bidVolume);
+    const offersFillPct = Math.min(1, bidVolume / offerVolume);
 
-            if ( topBid.volume > trade.volume ) {
-                // This is a local copy of the array, we can safely mutate
-                remainingBids[remainingBids.length - (i+1)] = {
-                    ...topBid,
-                    volume: topBid.volume - trade.volume
-                }
-                i--;
-            } else if ( bottomAsk.volume > trade.volume ) {
-                remainingAsks[j] = {
-                    ...bottomAsk,
-                    volume: bottomAsk.volume - trade.volume
-                }
-                j--;
-            }
+    let bidIndex = 0;
+    let offerIndex = 0;
+    let bidVolumeTaken = 0;
+    let offerVolumeTaken = 0;
 
-            trades.push(trade);
-            volume += trade.volume;
-            priceVolume += trade.volume * trade.price;
+    debug('%s: bidFillPct=%s offersFillPct=%s', marketResource, bidsFillPct, offersFillPct);
+
+    while (bidIndex < marketResource.bids.length && offerIndex < marketResource.offers.length) {
+        const bid = marketResource.bids[bidIndex];
+        const offer = marketResource.offers[offerIndex];
+
+        const bidVolume = bid.volume * bidsFillPct;
+        const offerVolume = offer.volume * offersFillPct;
+        const volume = Math.min(bidVolume - bidVolumeTaken, offerVolume - offerVolumeTaken);
+
+        debug('trade', bidIndex, offerIndex, volume, bidVolume, bidVolumeTaken, offerVolume, volume);
+
+        yield trade({
+            volume,
+            price: marketResource.avgPrice,
+            bid,
+            offer,
+        });
+
+        bidVolumeTaken += volume;
+        if (bidVolumeTaken >= bidVolume) {
+            bidIndex++;
+            bidVolumeTaken = 0;
+        }
+
+        offerVolumeTaken += volume;
+        if (offerVolumeTaken >= offerVolume) {
+            offerIndex++;
+            offerVolumeTaken = 0;
         }
     }
+}
 
-    return {
-        market: {
-            orderBook: {
-                bids: remainingBids,
-                asks: remainingAsks
-            },
-            volume: volume,
-            avgPrice: volume > 0 ? priceVolume / volume : market.avgPrice
-        },
-        trades: trades
+export function marketReducer(state: Market, action: MarketAction): Market {
+    switch (action.type) {
+        case TICK_START: {
+            return {
+                ...state,
+                resources: _.mapValues(
+                    state.resources,
+                    (marketResource) => ({
+                        ...marketResource,
+                        bids: [],
+                        offers: [],
+                        volume: 0,
+                        lastBids: marketResource.bids,
+                        lastOffers: marketResource.offers,
+                        avgPrice: updatePrice(marketResource),
+                    })
+                )
+            }
+        }
+        case BID: {
+            return {
+                ...state,
+                resources: {
+                    ...state.resources,
+                    [action.resourceId]: {
+                        ...state.resources[action.resourceId],
+                        bids: [
+                            ...state.resources[action.resourceId].bids,
+                            action
+                        ]
+                    }
+                }
+            }
+        }
+        case OFFER: {
+            return {
+                ...state,
+                resources: {
+                    ...state.resources,
+                    [action.resourceId]: {
+                        ...state.resources[action.resourceId],
+                        offers: [
+                            ...state.resources[action.resourceId].offers,
+                            action
+                        ]
+                    }
+                }
+            }
+        }
+        case TRADE: {
+            return {
+                ...state,
+                resources: {
+                    ...state.resources,
+                    [action.bid.resourceId]: {
+                        ...state.resources[action.bid.resourceId],
+                        volume: state.resources[action.bid.resourceId].volume + action.volume,
+                    }
+                }
+            }
+        }
     }
+    return state;
+}
+
+export function getGDP(market: Market) {
+    return sum(
+        Object.values(market.resources),
+        d => d.volume * d.avgPrice
+    ) * 365;
+}
+
+export function getDemandFactor(marketResource: MarketResource): number {
+    const offerVolume = sum(marketResource.offers, d => d.volume);
+    const bidVolume = sum(marketResource.bids, d => d.volume);
+
+    if (offerVolume === 0 && bidVolume === 0) {
+        return 0;
+    }
+
+    const demandFactor = (bidVolume - offerVolume) / Math.max(bidVolume, offerVolume);
+
+    return demandFactor;
+}
+
+function updatePrice(marketResource: MarketResource): number {
+    const demandFactor = getDemandFactor(marketResource);
+
+    return (1 + 0.01 * demandFactor) * marketResource.avgPrice;
 }

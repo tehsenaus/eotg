@@ -1,30 +1,58 @@
 
-export default {
+import { convertToResourceUnit, ResourceDict, ResourceId } from "./resources";
+
+export interface IndustrialProcess {
+	id: string;
+	// type: IndustrialProcessType;
+	naturalResources: ResourceDict;
+	input: ResourceDict;
+	output: ResourceDict;
+}
+
+export const INDUSTRIES = {
 
 	// Primary
 
 	grainFarm: {
-		natural: {
-			water: 1, solar: 10
+		// https://science.howstuffworks.com/environmental/green-science/question638.htm
+		naturalResources: {
+			water: 1,
+			solar: 10,
+			// land: convertToResourceUnit('land', 1, 'ac')
+		},
+		input: {
+			// https://www.nationmaster.com/country-info/stats/Agriculture/Workers-per-hectare
+			// Assume 2 per acre (low-tech farming)
+			unskilledLabour: 2,
+		},
+		capacity: 5,
+		output: {
+			grain: convertToResourceUnit('grain', 3 / 365, 't') // (3t / acre / year)
+		}
+	},
+
+	meatFarm: {
+		naturalResources: {
+			water: 10,
 		},
 		input: {
 			labour: 1
 		},
 		capacity: 5,
 		output: {
-			grain: 10
+			meat: 1
 		}
 	},
 
 	logging: extractionProcess('wood'),
-	coalMine: extractionProcess('coal'),
-	clayQuarry: extractionProcess('clay'),
-	limestoneQuarry: extractionProcess('limestone'),
-	ironOreQuarry: extractionProcess('ironOre'),
-	aluminiumOreQuarry: extractionProcess('aluminiumOre'),
-	siliconQuarry: extractionProcess('silicon'),
-	copperMine: extractionProcess('copper'),
-	oilRig: extractionProcess('oil'),
+	// coalMine: extractionProcess('coal'),
+	// clayQuarry: extractionProcess('clay'),
+	// limestoneQuarry: extractionProcess('limestone'),
+	// ironOreQuarry: extractionProcess('ironOre'),
+	// aluminiumOreQuarry: extractionProcess('aluminiumOre'),
+	// siliconQuarry: extractionProcess('silicon'),
+	// copperMine: extractionProcess('copper'),
+	// oilRig: extractionProcess('oil'),
 
 
 	// Refining
@@ -77,16 +105,18 @@ export default {
 	}
 };
 
-function extractionProcess(name, units?, capacity?) {
-	var nat = {}, out = {};
+export default INDUSTRIES;
+
+function extractionProcess(name: ResourceId, units?): IndustrialProcess {
+	const nat = {}, out = {};
 	nat[name] = units || 1;
 	out[name] = units || 1;
 	return {
-		natural: nat,
+		id: name,
+		naturalResources: nat,
 		input: {
-			labour: 1,
+			unskilledLabour: 1,
 		},
-		capacity: capacity || 10,
 		output: out
 	}
 }

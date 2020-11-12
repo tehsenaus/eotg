@@ -1,99 +1,109 @@
+import * as createDebug from "debug";
+import { mapValues } from "lodash";
+import { decayPct, ResourceDict, ResourceId } from "../entities/resources";
+import { EntityDict } from "./game-entity";
+import { TRADE, Trade } from "./market";
+import { TICK, TickAction } from "./time";
 
-import { FiniteResource, qty as resourceQty, takeResource, giveResource, finiteResourceReducer } from "../behaviours/resource";
+const debug = createDebug('eotg:behaviours:stockpile');
 
-export type Stockpile = { [commodityId: string]: FiniteResource };
+export const CONSUME_RESOURCES = "CONSUME_RESOURCES";
+export const PRODUCE_RESOURCES = "PRODUCE_RESOURCES";
 
-export interface StockpileState {
-	stockpiles: { [id: string]: Stockpile };
-}
+export type Stockpile = {
+	id: string;
+	resources: ResourceDict;
+	wealth: number;
+};
 
-export interface StockpileActionSpec {
+export interface ConsumeResourcesAction {
+	type: typeof CONSUME_RESOURCES;
 	stockpileId: string;
-	resourceId: string;
+	resources: ResourceDict;
 }
 
-export interface StockpileAction {
-	fromStockpile?: StockpileActionSpec;
-	toStockpile?: StockpileActionSpec;
+export interface ProduceResourcesAction {
+	type: typeof PRODUCE_RESOURCES;
+	stockpileId: string;
+	resources: ResourceDict;
 }
 
-export const initialState: StockpileState = {
-	stockpiles: {}
+export type StockpileAction = ConsumeResourcesAction | Trade | TickAction;
+
+export function getStockpileQty(stockpile: Stockpile, resourceId: ResourceId): number {
+	return stockpile.resources[resourceId] || 0;
 }
 
-export function qty(stockpileId: string, resourceId: string, state: StockpileState): number {
-	if ( stockpileId in state.stockpiles ) {
-		return resourceQty( state.stockpiles[stockpileId][resourceId] );
-	}
-
-	return 0;
+export function getAvailableAmounts(stockpile: Stockpile, resources: ResourceDict): ResourceDict {
+	return mapValues(resources, (desiredAmount, resourceId) => {
+		return Math.min(desiredAmount, getStockpileQty(stockpile, resourceId as ResourceId));
+	});
 }
 
-export function takeFromStockpile(stockpileId: string, resourceId: string, n: number) {
+export function consumeResources(stockpileId: string, resources: ResourceDict): ConsumeResourcesAction {
 	return {
-		fromStockpile: {
-			...takeResource(n),
-			stockpileId: stockpileId,
-			resourceId: resourceId
+		type: CONSUME_RESOURCES,
+		stockpileId,
+		resources,
+	};
+}
+
+export function stockpileReducer(state: Stockpile, action: StockpileAction) {
+	switch (action.type) {
+		case CONSUME_RESOURCES: {
+			return applyConsumeResources(state, action.resources);
+		}
+		case TRADE: {
+			if (action.bid.stockpileId === state.id) {
+				return {
+					...state,
+					wealth: state.wealth - action.price * action.volume,
+					resources: {
+						...state.resources,
+						[action.bid.resourceId]: getStockpileQty(state, action.bid.resourceId) + action.volume,
+					},
+				}
+			} else if (action.offer.stockpileId === state.id) {
+				return {
+					...state,
+					wealth: state.wealth + action.price * action.volume,
+					resources: {
+						...state.resources,
+						[action.bid.resourceId]: getStockpileQty(state, action.bid.resourceId) - action.volume,
+					},
+				}
+			}
+			return state;
+		}
+
+		case TICK: {
+			const resourceDecay = mapValues(
+				state.resources,
+				(amount, resourceId) => amount * decayPct(resourceId, action.deltaTime)
+			);
+			return applyConsumeResources(state, resourceDecay);
 		}
 	}
-}
-
-export function giveToStockpile(stockpileId: string, resourceId: string, n: number) {
-	return {
-		toStockpile: {
-			...giveResource(n),
-			stockpileId: stockpileId,
-			resourceId: resourceId
-		}
-	}
-}
-
-export function transferBetweenStockpiles(fromStockpileId: string, toStockpileId: string, resourceId: string, n: number) {
-	return {
-		...takeFromStockpile(fromStockpileId, resourceId, n),
-		...giveToStockpile(toStockpileId, resourceId, n)
-	}
-}
-
-export function stockpileReducer(initialState: StockpileState, action: StockpileAction) {
-	var state = initialState;
-
-	if ( action.fromStockpile ) {
-		state = doStockpileAction(state, action.fromStockpile);
-	}
-
-	if ( action.toStockpile ) {
-		if ( action.fromStockpile && state === initialState ) {
-			// If this is a transfer and the previous state didn't change, then we couldn't take the
-			// resource from the source stockpile, and the transfer fails.
-		} else {
-			state = doStockpileAction(state, action.toStockpile);
-		}
-	}
-
 	return state;
 }
 
-function doStockpileAction(state: StockpileState, stockpileAction: StockpileActionSpec): StockpileState {
-	const stockpileId = stockpileAction.stockpileId;
-	const resourceId = stockpileAction.resourceId;
-
-	const stockpile = state.stockpiles[stockpileId];
-
-	const oldResourceState = stockpile && stockpile[resourceId];
-	const newResourceState = finiteResourceReducer(oldResourceState, stockpileAction);
-
-	if ( newResourceState === oldResourceState ) return state;
-
-	return {
+export function applyConsumeResources(state: Stockpile, resources: EntityDict<number>): Stockpile {
+	state = {
 		...state,
-		stockpiles: {
-			...state.stockpiles,
-			[stockpileId]: {
-				...stockpile,
-				[resourceId]: newResourceState
-			}
+		resources: {
+			...state.resources,
 		}
 	}
+	for (let resourceId in resources) {
+		state.resources[resourceId] = Math.max(0, getStockpileQty(state, resourceId as ResourceId) - resources[resourceId]);
+	}
+	return state;
+}
+
+export function sumResourceAmounts(resources: ResourceDict): number {
+	let amount = 0;
+	for (let resourceId in resources) {
+		amount += resources[resourceId];
+	}
+	return amount;
 }
