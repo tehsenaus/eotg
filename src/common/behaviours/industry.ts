@@ -1,7 +1,6 @@
 
 import { mapValues } from "lodash";
 import { offer, Trade, TRADE, TradingStartAction, TRADING_START } from "./market";
-import { TraderState, marketPrice } from "./trader";
 
 import * as createDebug from "debug";
 import { TICK, TickAction, TickStartAction } from "./time";
@@ -13,9 +12,13 @@ import { updateExponentialMovingAvgDict } from "../engine/stats";
 
 const debug = createDebug('eotg:behaviours:industry');
 
+export const START_INDUSTRY = "industry-start";
+export const PAY_DIVIDEND = "industry-pay-dividend";
+
 export interface Industry {
 	id: string;
 	process: IndustrialProcess;
+	ownerPopulaceId: string;
 
 	stockpile: Stockpile;
 
@@ -30,18 +33,42 @@ export interface Industry {
 	rollingLastSales: ResourceDict;
 }
 
-export type IndustryAction = Trade | TickAction | TradingStartAction;
+export interface StartIndustryAction {
+	type: typeof START_INDUSTRY;
+	processId: string;
+	ownerPopulaceId: string;
+	wealth: number;
+	capacity: number;
+}
+
+export interface PayDividendAction {
+	type: typeof PAY_DIVIDEND;
+	amount: number;
+	populaceId: string;
+	industryId: string;
+}
+
+export type IndustryAction = Trade | TickAction | TradingStartAction | PayDividendAction;
+
+export function startIndustry(props: Omit<StartIndustryAction, 'type'>): StartIndustryAction {
+	return {
+		...props,
+		type: START_INDUSTRY,
+	}
+}
 
 export function createIndustry({
+	id,
 	processId,
+	ownerPopulaceId,
 	wealth,
 	capacity = 100,
 }): Industry {
 	const process = INDUSTRIES[processId];
-	const id = processId; // TODO
 	return {
 		id,
 		process,
+		ownerPopulaceId,
 		stockpile: {
 			id: id + '/stockpile',
 			wealth,
@@ -79,6 +106,16 @@ export function * generateIndustryActions(industry: Industry) {
 			});
 		}
 	}
+
+	const lastProfit = getLastProfit(industry);
+	if (lastProfit > 0) {
+		yield {
+			type: PAY_DIVIDEND,
+			amount: lastProfit * 0.5,
+			populaceId: industry.ownerPopulaceId,
+			industryId: industry.id,
+		}
+	}
 }
 
 export function industryReducer(state: Industry, action: IndustryAction): Industry {
@@ -104,6 +141,18 @@ export function industryReducer(state: Industry, action: IndustryAction): Indust
 				...state,
 				stockpile: stockpileReducer(state.stockpile, action),
 			}
+		}
+		case PAY_DIVIDEND: {
+			if (action.industryId === state.id) {
+				return {
+					...state,
+					stockpile: {
+						...state.stockpile,
+						wealth: state.stockpile.wealth - action.amount,
+					}
+				}
+			}
+			break;
 		}
 		case TICK: {
 			state = applyProduce(state);
@@ -138,7 +187,7 @@ function applyProduce(industry: Industry): Industry {
 		amount => -amount * capacityAvailable
 	);
 
-	console.log('produce', capacityAvailable, outputsProduced);
+	debug('produce', capacityAvailable, outputsProduced);
 
 	return {
 		...industry,
@@ -155,7 +204,7 @@ function maybeExpand(industry: Industry): Industry {
 		return industry;
 	}
 	if (getLastProfit(industry) > 0 && industry.stockpile.wealth >= industry.initialWealth * 2) {
-		console.log('expand', industry);
+		debug('expand', industry);
 		return {
 			...industry,
 			stockpile: {
@@ -185,7 +234,7 @@ function getDesiredCapacity(industry: Industry) {
 			/ industry.process.output[resourceId]
 	)));
 
-	console.log('desired-capacity', desiredCapacity, industry.lastSales, industry.stockpile.resources, desiredResources);
+	debug('desired-capacity', desiredCapacity, industry.lastSales, industry.stockpile.resources, desiredResources);
 
 	return Math.max(0, desiredCapacity);
 }

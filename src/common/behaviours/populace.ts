@@ -5,8 +5,8 @@ import { PopulaceClassId, POPULACE_CLASSES } from "../entities/populace-classes"
 import { generateConsumerActions } from "./consumer";
 import { TICK, TickAction } from "./time";
 import { Modifier, applyModifiers } from "../engine/modifier";
-import { OFFER, Offer, offer, Order, Trade, TRADE } from "./market";
-import { act } from "react-dom/test-utils";
+import { OFFER, Offer, offer, Trade, TRADE } from "./market";
+import { PayDividendAction, PAY_DIVIDEND, StartIndustryAction, START_INDUSTRY } from "./industry";
 
 export interface Populace {
 	id: string;
@@ -91,7 +91,7 @@ export interface PopulaceMigration {
 }
 
 export type PopulaceAction = TickAction | PopulaceGrowth | PopulaceMigration | WorkAction | EmployeeWorkAction
-	| Trade | Offer;
+	| Trade | Offer | StartIndustryAction | PayDividendAction;
 
 export function createPopulace({
 	locationId,
@@ -205,6 +205,31 @@ export function populaceReducer(state: Populace, action: PopulaceAction): Popula
 					},
 				}
 			}
+			break;
+		}
+		case START_INDUSTRY: {
+			if (action.ownerPopulaceId === state.id) {
+				return {
+					...state,
+					stockpile: {
+						...state.stockpile,
+						wealth: state.stockpile.wealth - action.wealth,
+					},
+				}
+			}
+			break;
+		}
+		case PAY_DIVIDEND: {
+			if (action.populaceId == state.id) {
+				return {
+					...state,
+					stockpile: {
+						...state.stockpile,
+						wealth: state.stockpile.wealth + action.amount,
+					},
+				}
+			}
+			break;
 		}
 	}
 	return state;

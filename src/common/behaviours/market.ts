@@ -1,9 +1,12 @@
 
 import * as _ from "lodash";
+import * as createDebug from "debug";
 import { sum } from "d3-array";
 import { ResourceId, resourceTypes } from "../entities/resources";
 import { EntityDict } from "./game-entity";
 import { TickStartAction, TICK_START } from "./time";
+
+const debug = createDebug('eotg:behaviours:market');
 
 export const TRADING_START = "market-trading-start";
 export const OFFER = "market-offer";
@@ -121,9 +124,8 @@ export function * generateMarketActions(market: Market) {
 
 export function * generateMarketResourceActions(marketResource: MarketResource) {
     // Here we match bids and offers to generate trades
-
-    const offerVolume = sum(marketResource.offers, d => d.volume);
     const bidVolume = sum(marketResource.bids, d => d.volume);
+    const offerVolume = sum(marketResource.offers, d => d.volume);
 
     if (offerVolume === 0 || bidVolume === 0) {
         return;
@@ -137,13 +139,17 @@ export function * generateMarketResourceActions(marketResource: MarketResource) 
     let bidVolumeTaken = 0;
     let offerVolumeTaken = 0;
 
+    debug('%s: bidFillPct=%s offersFillPct=%s', marketResource, bidsFillPct, offersFillPct);
+
     while (bidIndex < marketResource.bids.length && offerIndex < marketResource.offers.length) {
         const bid = marketResource.bids[bidIndex];
         const offer = marketResource.offers[offerIndex];
 
         const bidVolume = bid.volume * bidsFillPct;
         const offerVolume = offer.volume * offersFillPct;
-        const volume = Math.min(bidVolume, offerVolume);
+        const volume = Math.min(bidVolume - bidVolumeTaken, offerVolume - offerVolumeTaken);
+
+        debug('trade', bidIndex, offerIndex, volume, bidVolume, bidVolumeTaken, offerVolume, volume);
 
         yield trade({
             volume,
@@ -242,8 +248,8 @@ export function getDemandFactor(marketResource: MarketResource): number {
     const offerVolume = sum(marketResource.offers, d => d.volume);
     const bidVolume = sum(marketResource.bids, d => d.volume);
 
-    if (offerVolume === 0 || bidVolume === 0) {
-        return marketResource.avgPrice;
+    if (offerVolume === 0 && bidVolume === 0) {
+        return 0;
     }
 
     const demandFactor = (bidVolume - offerVolume) / Math.max(bidVolume, offerVolume);

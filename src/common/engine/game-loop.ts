@@ -1,3 +1,6 @@
+import * as createDebug from "debug";
+
+const debug = createDebug('eotg:engine:game-loop');
 
 export function * run(reducer, tickGameLoop) {
 	// get the initial state
@@ -11,7 +14,7 @@ export function * run(reducer, tickGameLoop) {
 				break;
 			}
 
-			console.log('game-loop: executing action:', action);
+			debug('executing action:', action);
 			
 			var userAction = yield state;
 			while ( userAction ) {

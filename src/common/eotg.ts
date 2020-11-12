@@ -37,12 +37,7 @@ const EMPTY_STATE: GameState = {
 			level: MarketLevel.LOCAL,
 		}),
 		naturalResources: {},
-		industries: {
-			'farm': createIndustry({
-				processId: 'grainFarm',
-				wealth: 1000,
-			})
-		}
+		industries: {}
 	}
 };
 

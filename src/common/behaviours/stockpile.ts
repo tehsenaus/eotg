@@ -1,8 +1,11 @@
+import * as createDebug from "debug";
 import { mapValues } from "lodash";
 import { decayPct, ResourceDict, ResourceId } from "../entities/resources";
 import { EntityDict } from "./game-entity";
 import { TRADE, Trade } from "./market";
 import { TICK, TickAction } from "./time";
+
+const debug = createDebug('eotg:behaviours:stockpile');
 
 export const CONSUME_RESOURCES = "CONSUME_RESOURCES";
 export const PRODUCE_RESOURCES = "PRODUCE_RESOURCES";
@@ -94,7 +97,6 @@ export function applyConsumeResources(state: Stockpile, resources: EntityDict<nu
 	for (let resourceId in resources) {
 		state.resources[resourceId] = Math.max(0, getStockpileQty(state, resourceId as ResourceId) - resources[resourceId]);
 	}
-	console.log(state);
 	return state;
 }
 
